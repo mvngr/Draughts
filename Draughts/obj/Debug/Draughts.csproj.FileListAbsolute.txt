@@ -1,0 +1,5 @@
+C:\Users\mihai\Documents\rider\Draughts\Draughts\bin\Debug\Draughts.exe
+C:\Users\mihai\Documents\rider\Draughts\Draughts\bin\Debug\Draughts.pdb
+C:\Users\mihai\Documents\rider\Draughts\Draughts\obj\Debug\Draughts.csprojResolveAssemblyReference.cache
+C:\Users\mihai\Documents\rider\Draughts\Draughts\obj\Debug\Draughts.exe
+C:\Users\mihai\Documents\rider\Draughts\Draughts\obj\Debug\Draughts.pdb
