@@ -1,0 +1,2 @@
+# Draughts
+Draughts console game
