@@ -7,14 +7,13 @@ namespace Draughts
     {
         public static void Main(string[] args)
         {
-            Draughts d = new Draughts();
+            Game d = new Game();
             d.print();
             while (true)
             {
                 Console.Write("Ход: ");
                 string s = Console.ReadLine();
                 d.turn(s.Substring(0, 2), s.Substring(3, 2));
-                Console.Clear();
                 d.print();
             }
             
