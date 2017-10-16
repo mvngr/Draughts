@@ -9,14 +9,17 @@ namespace Draughts
         {
             Game d = new Game();
             d.print();
+            
             while (true)
             {
                 Console.Write("Ход: ");
+                
                 string s = Console.ReadLine();
+                if(s.Length != 5)
+                    continue;
                 d.turn(s.Substring(0, 2), s.Substring(3, 2));
                 d.print();
             }
-            
         }
     }
 }

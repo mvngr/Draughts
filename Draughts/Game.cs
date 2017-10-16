@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Linq;
+using System.Net.Mime;
 
 namespace Draughts
 {
@@ -9,13 +10,13 @@ namespace Draughts
     {
         
         /*
-         * Черные = -1 и -2
-         * Белые = 1 и 2
-         * Пустая клетка = 0
-         * 2 - дамки
-         * 1 - пешки
-         * Флаг хода true = белые
-         * Флаг хода false = черные
+         * Black = -1 & -2
+         * White = 1 & 2
+         * Empty cage = 0
+         * 2 - king
+         * 1 - draught
+         * flag of turn true = white
+         * flag of turn false = black
          */
         private const int draughtsSize = 8;
         
@@ -32,7 +33,7 @@ namespace Draughts
         public Game()
         {
             a = new List<List<int>>();
-            turnFlag = true;
+            turnFlag = false;
             for (int i = 0; i < draughtsSize; i++)
             {
                 a.Add(new List<int>());
@@ -42,6 +43,8 @@ namespace Draughts
             setDefault();
         }
 
+        // ------- Print block -------
+        
         void printInfoAboutTurn()
         {
             Console.Write("    Ходящий цвет: ");
@@ -139,6 +142,8 @@ namespace Draughts
             }
         }
 
+        //------- Specific block -------
+        
         private int charToIndex(char c) //A,B,C,D,E,F,G,H
         {
             return c - 'A';
@@ -160,6 +165,8 @@ namespace Draughts
         {
             return (p.v < 8 && p.v >= 0 && p.h < 8 && p.h >= 0) ? true : false;
         }
+        
+        //------- In game start -------
 
         private void setDefault()
         {
@@ -185,6 +192,8 @@ namespace Draughts
                     }
                 }
         }
+        
+        //------- Helpful functions -------
 
         private struct Position
         {
@@ -200,16 +209,56 @@ namespace Draughts
             return p;
         }
 
+        private int posToInt(Position p)
+        {
+            return a[p.v][p.h];
+        }
+
         private void move(Position from, Position to)
         {
-            a[to.v][to.h] = a[from.v][from.h];
+            a[to.v][to.h] = posToInt(from);
             a[from.v][from.h] = 0;
             return;
         }
+        
+        private bool isDiagonal(Position from, Position to)
+        {
+            return Math.Abs(from.v - to.v) == Math.Abs(from.h - to.h) ? true : false;
+        }
+
+        private void makeDraughtToKing()
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                if (a[0][i] == 1)
+                    a[0][i] = 2;
+                if (a[7][i] == -1)
+                    a[7][i] = -2;
+            }
+            return;
+        }
+
+        private bool canTurn()
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    Position p;
+                    p.v = i;
+                    p.h = j;
+                    if (a[p.v][p.h] != 0 && !isYourTurn(p)) //can play next player
+                        return true;
+                }
+            }
+            return false;
+        }
+        
+        //------- All with draught -------
 
         private bool canDraughtEatOneMove(Position from, Position to)
         {
-            if (a[from.v][from.h] == 0 || a[to.v][to.h] != 0)
+            if (posToInt(from) == 0 || posToInt(to) != 0)
                 return false;
             Position temp = new Position(); //position between "from" and "to"
             temp.v = from.v + (to.v - from.v) / 2;
@@ -277,7 +326,7 @@ namespace Draughts
                     Position toP = setToPositionStructType(s.Substring(3, 2));
 
                     if (!isCorrectCage(fromP) || !isCorrectCage(toP) || fromP.v != from.v || fromP.h != from.h
-                        || a[fromP.v][fromP.h] == 0 || a[toP.v][toP.h] != 0 || !isYourTurn(fromP))
+                        || posToInt(fromP) == 0 || posToInt(toP) != 0 || !isYourTurn(fromP))
                         //if the moves incorrectly or different combos checker that was introduced in the console
                         //or the coordinates of the move point to the impossible cells
                         continue;
@@ -304,10 +353,160 @@ namespace Draughts
                 return false;
             return true;
         }
+        
+        //------- All with king -------
+
+        private void generateVector(int i, out int v, out int h)
+        {
+            v = -1;
+            h = -1;
+
+            switch (i)
+            {
+                case 0:
+                    v = 1;
+                    h = 1;
+                    break;
+                case 1:
+                    v = 1;
+                    h = -1;
+                    break;
+                case 2:
+                    v = -1;
+                    h = -1;
+                    break;
+                case 3:
+                    v = -1;
+                    h = 1;
+                    break;
+            }
+            return;
+        }
+        
+        private bool canTurnInKingCombo(Position from)
+        {
+            for (int i = 0; i < 4; i++) //Check all turns
+            {
+                Position newPosition = from;
+                int v, h;
+                generateVector(i, out v, out h);
+                while (true)
+                {
+                    newPosition.v += v;
+                    newPosition.h += h;
+                    if (isCorrectCage(newPosition))
+                    {
+                        if(posToInt(newPosition) == 0)
+                            continue;
+                        
+                        if (isYourTurn(newPosition))
+                            break; //friendly figure
+                        else
+                        {
+                            newPosition.v += v;
+                            newPosition.h += h;
+                            if (isCorrectCage(newPosition) && posToInt(newPosition) == 0)
+                                return true; //if I can eating figure
+                        }
+                    }
+                    else
+                        break;
+                }
+            }
+            return false;
+        }
+        
+        private Position kingEat(Position from, Position to)
+        {
+            Position res, fromCopy = from, badTurn;
+            res.v = -1; 
+            res.h = -1;
+            badTurn.h = -1;
+            badTurn.v = -1;
+            do
+            {
+                fromCopy.v += (to.v - from.v) / Math.Abs(to.v - from.v); //figure moves down or up
+                fromCopy.h += (to.h - from.h) / Math.Abs(to.h - from.h);
+
+                if (posToInt(fromCopy) != 0)
+                {
+                    if (!isYourTurn(fromCopy))
+                    {
+                        if (res.v == -1)
+                            res = fromCopy;
+                        else
+                            return badTurn; //two or many figures between
+                    }
+                    else
+                        return badTurn; //friendly figure between
+                }
+            } while (fromCopy.v != to.v);
+
+            if (res.v == -1) //if it's simple move
+                return badTurn;
+
+            move(from, to); //eating
+            a[res.v][res.h] = 0; //eating
+            from = to;
+            
+            if (!canTurnInKingCombo(from))
+                return res;
+            else
+            {
+                while (true)
+                {
+                    print();
+                    Console.Write("Продолжите комбо: ");
+                    string s = Console.ReadLine();
+                    Position fromP = setToPositionStructType(s.Substring(0, 2));
+                    Position toP = setToPositionStructType(s.Substring(3, 2));
+
+                    if (!isCorrectCage(fromP) || !isCorrectCage(toP) || fromP.v != from.v || fromP.h != from.h
+                        || posToInt(fromP) == 0 || posToInt(toP) != 0 || !isYourTurn(fromP))
+                        //if the moves incorrectly or different combos checker that was introduced in the console
+                        //or the coordinates of the move point to the impossible cells
+                        continue;
+                    else
+                    {
+                        return kingEat(fromP, toP); //start the recursion moves
+                    }
+                }
+            }
+        }
+
+        private bool simpleMove(Position from, Position to)
+        {
+            Position fromCopy = from;
+            do
+            {
+                fromCopy.v += (to.v - from.v) / Math.Abs(to.v - from.v); //figure moves down or up
+                fromCopy.h += (to.h - from.h) / Math.Abs(to.h - from.h);
+                if (posToInt(fromCopy) != 0)
+                    return false;
+            } while (fromCopy.v != to.v);
+            return true;
+        }
+        
+        private bool kingTurn(Position from, Position to)
+        {
+            if (!isDiagonal(from, to))
+                return false;
+            
+            if (kingEat(from, to).v == -1)
+            {
+                if (simpleMove(from, to))
+                    move(from, to);
+                else
+                    return false;
+            }
+            return true;
+        }
+
+        //------- Turns -------
 
         private bool isYourTurn(Position p)
         {
-            return (a[p.v][p.h] > 0) == turnFlag ? true : false;
+            return (posToInt(p) > 0) == turnFlag ? true : false;
         }
         
         public bool turn(string fromStr, string toStr)
@@ -318,13 +517,27 @@ namespace Draughts
             Position from = setToPositionStructType(fromStr);
             Position to = setToPositionStructType(toStr);
             
-            if (a[from.v][from.h] == 0 || a[to.v][to.h] != 0 || !isYourTurn(from))
+            if (posToInt(from) == 0 || posToInt(to) != 0 || !isYourTurn(from))
                 return false;
             
-            //this must be rules for draughts and kings
-            if (Math.Abs(a[from.v][from.h]) == 1)
+            //rules for draughts
+            if (Math.Abs(posToInt(from)) == 1)
                 if (!draughtTurn(from, to))
                     return false;
+            
+            makeDraughtToKing();
+            
+            //rules for kings
+            if (Math.Abs(posToInt(from)) == 2)
+                if (!kingTurn(from, to))
+                    return false;
+
+            if (!canTurn())
+            {
+                Console.WriteLine("Конец игры!");
+                Console.ReadKey();
+                System.Environment.Exit(0);
+            }
             
             turnFlag = !turnFlag; //next player turn
             return true;
